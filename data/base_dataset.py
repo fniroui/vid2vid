@@ -100,7 +100,7 @@ def get_img_params(opt, size):
     flip = random.random() > 0.5    
     return {'new_size': (new_w, new_h), 'crop_size': (crop_w, crop_h), 'crop_pos': (crop_x, crop_y), 'flip': flip}
 
-def get_transform(opt, params, method=Image.BICUBIC, normalize=True, toTensor=True):
+def get_transform(opt, params, method=Image.BICUBIC, normalize=True, toTensor=True, normalize1D=False):
     transform_list = []
     ### resize input image
     if 'resize' in opt.resize_or_crop:
@@ -122,6 +122,9 @@ def get_transform(opt, params, method=Image.BICUBIC, normalize=True, toTensor=Tr
     if normalize:
         transform_list += [transforms.Normalize((0.5, 0.5, 0.5),
                                                 (0.5, 0.5, 0.5))]
+    if normalize1D:
+        transform_list += [transforms.Normalize([0.5],
+                                                [0.5])]
     return transforms.Compose(transform_list)
 
 def toTensor_normalize():    
