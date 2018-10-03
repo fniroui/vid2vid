@@ -34,12 +34,13 @@ class TestDataset(BaseDataset):
         A_img = Image.open(self.A_paths[seq_idx][0]).convert('RGB')        
         params = get_img_params(self.opt, A_img.size)
         transform_scaleB = get_transform(self.opt, params)
-        transform_scaleA = get_transform(self.opt, params, method=Image.NEAREST, normalize=False) if self.A_is_label else transform_scaleB
+        # transform_scaleA = get_transform(self.opt, params, method=Image.NEAREST, normalize=False) if self.A_is_label else transform_scaleB
+        transform_scaleA = get_transform(self.opt, params, method=Image.NEAREST, normalize=False, normalize1D=True)
         frame_range = list(range(tG)) if self.A is None else [tG-1]
-           
+
         for i in frame_range:                                                   
             A_path = self.A_paths[seq_idx][self.frame_idx + i]            
-            Ai = self.get_image(A_path, transform_scaleA, is_label=self.A_is_label)            
+            Ai = self.get_image(A_path, transform_scaleA, is_depth=True)
             self.A = concat_frame(self.A, Ai, tG)
 
             if self.use_real:
@@ -60,8 +61,16 @@ class TestDataset(BaseDataset):
         return_list = {'A': self.A, 'B': self.B, 'inst': self.I, 'A_path': A_path, 'change_seq': self.change_seq}
         return return_list
 
-    def get_image(self, A_path, transform_scaleA, is_label=False):
-        A_img = Image.open(A_path)
+    def get_image(self, A_path, transform_scaleA, is_label=False, is_depth=False):
+        if is_depth:
+            A_img = Image.open(A_path).convert('F')
+            A_img = np.array(A_img, dtype=np.float32)
+            A_img = np.divide(A_img, 100.0)
+            A_img = Image.fromarray(A_img)
+
+        else:
+            A_img = Image.open(A_path).convert('RGB')
+
         A_scaled = transform_scaleA(A_img)
         if is_label:
             A_scaled *= 255.0
