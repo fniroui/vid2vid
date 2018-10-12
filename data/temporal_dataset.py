@@ -42,15 +42,16 @@ class TemporalDataset(BaseDataset):
         B_img = Image.open(B_paths[0]).convert('RGB')        
         params = get_img_params(self.opt, B_img.size)          
         transform_scaleB = get_transform(self.opt, params)
-        transform_scaleA = get_transform(self.opt, params, method=Image.NEAREST, normalize=False) if self.A_is_label else transform_scaleB
+        # transform_scaleA = get_transform(self.opt, params, method=Image.NEAREST, normalize=False) if self.A_is_label else transform_scaleB
+        transform_scaleA = get_transform(self.opt, params, method=Image.NEAREST, normalize=False, normalize1D=True)
 
         # read in images
         A = B = inst = 0
         for i in range(n_frames_total):            
             A_path = A_paths[start_idx + i * t_step]
             B_path = B_paths[start_idx + i * t_step]            
-            Ai = self.get_image(A_path, transform_scaleA, is_label=self.A_is_label)            
-            Bi = self.get_image(B_path, transform_scaleB)
+            Ai = self.get_image(A_path, transform_scaleA, is_depth=True) #.type(torch.float)
+            Bi = self.get_image(B_path, transform_scaleB) #.type(torch.float)
             
             A = Ai if i == 0 else torch.cat([A, Ai], dim=0)            
             B = Bi if i == 0 else torch.cat([B, Bi], dim=0)            
@@ -63,11 +64,21 @@ class TemporalDataset(BaseDataset):
         return_list = {'A': A, 'B': B, 'inst': inst, 'A_path': A_path, 'B_paths': B_path}
         return return_list
 
-    def get_image(self, A_path, transform_scaleA, is_label=False):
-        A_img = Image.open(A_path)        
+    def get_image(self, A_path, transform_scaleA, is_label=False, is_depth=False):
+        if is_depth:
+            A_img = Image.open(A_path).convert('F')
+            A_img = np.array(A_img, dtype=np.float32)
+            A_img = np.divide(A_img, 100.0)
+            A_img = Image.fromarray(A_img)
+
+        else:
+            A_img = Image.open(A_path).convert('RGB')
+
         A_scaled = transform_scaleA(A_img)
+
         if is_label:
             A_scaled *= 255.0
+
         return A_scaled
 
     def __len__(self):
